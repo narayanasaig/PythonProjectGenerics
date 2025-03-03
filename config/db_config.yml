@@ -1,0 +1,21 @@
+DEV:
+  db_type: "postgres"
+  host: "saidbcluster.cluster-cl7vxsat3hqn.us-east-1.rds.amazonaws.com"
+  port: 5432
+  user: "postgres"
+  password: "Zaq12wsx"
+  database: "my_test_db"
+  pooling:
+    minconn: 1
+    maxconn: 5
+
+PROD:
+  db_type: "postgres"
+  host: "prod-db.yourcompany.com"
+  port: 5432
+  user: "prod_user"
+  password: "prod_password"
+  database: "prod_db"
+  pooling:
+    minconn: 2
+    maxconn: 10

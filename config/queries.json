@@ -1,0 +1,15 @@
+{
+  "employee_select_postgres": {
+    "sql": "SELECT id, first_name, last_name,title,created_at FROM employees WHERE id = ANY(%s) AND title = ANY(%s)",
+    "params": [[1,2,3], ["Software Engineer","Project Manager","Data Analyst"]]
+  },
+
+  "employee_select_oracle": {
+    "sql": "SELECT emp_id, emp_name, dept_id FROM employees WHERE dept_id = :1 AND status = :2",
+    "params": [20, "INACTIVE"]
+  },
+
+  "department_select": {
+    "sql": "SELECT dept_id, dept_name FROM departments"
+  }
+}
