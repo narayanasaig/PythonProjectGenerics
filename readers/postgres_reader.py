@@ -36,6 +36,8 @@ class PostgresDBReader(DBReader[psycopg2.extensions.connection]):
     password: str
     database: str
     pooling: Dict[str, Any]
+    sql: Optional[str] = None
+    params: Optional[Tuple[Any, ...]] = None
 
     _connection_pool: Optional[pool.SimpleConnectionPool] = None
 
@@ -70,6 +72,8 @@ class PostgresDBReader(DBReader[psycopg2.extensions.connection]):
         """
         conn = self.connect()
         rows=[]
+        query = self.sql
+        params = self.params
         try:
             with conn.cursor() as cur:
                 logger.debug(f"[PostgresDBReader] Executing: {query} | params={params}")
