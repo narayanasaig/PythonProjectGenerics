@@ -1,0 +1,10 @@
+Cognos report optimization work has created significant time and cost savings for the company. By improving how reports run and are scheduled, you've cut down the time it takes to generate reports by about 75%.
+The main benefits include:
+
+Reports that used to take 45 minutes now finish in about 12 minutes
+End-of-day reconciliation processes are much faster (from 2 hours down to 30 minutes)
+Less manual work is needed to fix problems (reduced from 1 hour to just 10 minutes daily)
+The system uses fewer resources (about half the CPU and memory it used before)
+
+These improvements save the company approximately $60,000 per year in operational costs, mainly through time savings for staff who can now focus on other valuable work.
+Your optimized cross-tab reports provide more accurate summaries, and the new metrics reports make reconciliations much clearer. The integration with Alteryx works more smoothly, reducing errors and making the whole data pipeline more reliable.
