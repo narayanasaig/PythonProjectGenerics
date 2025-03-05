@@ -1,6 +1,6 @@
 DEV:
   db_type: "postgres"
-  host: "saidbcluster.cluster-cl7vxsat3hqn.us-east-1.rds.amazonaws.com"
+  host: "database-1-instance-1.cl7vxsat3hqn.us-east-1.rds.amazonaws.com"
   port: 5432
   user: "postgres"
   password: "Zaq12wsx"
@@ -19,3 +19,7 @@ PROD:
   pooling:
     minconn: 2
     maxconn: 10
+
+DEV_S3:
+  db_type: "s3"
+  region: "us-east-1"

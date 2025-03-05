@@ -1,51 +1,82 @@
 # readers/base_reader.py
 
-
 from typing import Protocol, TypeVar, Generic, Any, List, Tuple, Optional
 import pandas as pd
-#from numpy import PyArray_SearchSorted
 
 from python_project_generics.logging_config import get_logger
-
 
 logger = get_logger(__name__)
 
 TConn = TypeVar("TConn")
 
+
 class DBReader(Protocol[TConn], Generic[TConn]):
     """
-    A generic interface for reading data from a database.
+    A generic interface for reading data from various sources.
+
+    This protocol defines the common methods that all readers must implement,
+    regardless of whether they connect to databases (PostgreSQL, Oracle) or
+    file storage systems (S3).
 
     Methods:
         connect() -> TConn:
-            Obtain the underlying connection object (psycopg2 or cx_Oracle).
+            Obtain the underlying connection object.
 
-        execute_query(query: str, params: Optional[Tuple[Any, ...]] = None) -> List[Tuple[Any, ...]]:
-            Execute a query (SELECT) with placeholders. Returns rows if any.
+        execute_query(query: Optional[str] = None, params: Optional[Tuple[Any, ...]] = None) -> List[Tuple[Any, ...]]:
+            Execute a query with placeholders. Returns rows if any.
 
-        fetch_as_dataframe(query: str, params: Optional[Tuple[Any, ...]] = None) -> pd.DataFrame:
-            SELECT query -> DataFrame.
+        fetch_as_dataframe(query: Optional[str] = None, params: Optional[Tuple[Any, ...]] = None) -> pd.DataFrame:
+            Fetch data and return as DataFrame.
 
         close() -> None:
             Clean up resources (close connection pool, etc.).
     """
 
     def connect(self) -> TConn:
-        pass
+        """
+        Establish a connection to the data source.
+
+        Returns:
+            The connection object specific to the data source.
+        """
+        ...
 
     def execute_query(
-        self,
-        query: str,
-        params: Optional[Tuple[Any, ...]] = None
+            self,
+            query: Optional[str] = None,
+            params: Optional[Tuple[Any, ...]] = None
     ) -> List[Tuple[Any, ...]]:
-        pass
+        """
+        Execute a query on the data source.
+
+        Parameters:
+            query: The query to execute. If None, uses a pre-configured query.
+            params: Parameters for the query. If None, uses pre-configured parameters.
+
+        Returns:
+            List of result rows. Empty list for non-query operations or no results.
+        """
+        ...
 
     def fetch_as_dataframe(
-        self,
-        query: str,
-        params: Optional[Tuple[Any, ...]] = None
+            self,
+            query: Optional[str] = None,
+            params: Optional[Tuple[Any, ...]] = None
     ) -> pd.DataFrame:
-        pass
+        """
+        Execute a query and return results as a pandas DataFrame.
+
+        Parameters:
+            query: The query to execute. If None, uses a pre-configured query.
+            params: Parameters for the query. If None, uses pre-configured parameters.
+
+        Returns:
+            DataFrame containing the query results or file contents.
+        """
+        ...
 
     def close(self) -> None:
-        pass
+        """
+        Close the connection and release resources.
+        """
+        ...

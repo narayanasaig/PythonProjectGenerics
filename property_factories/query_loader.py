@@ -1,4 +1,4 @@
-# utils/query_loader.py
+# property_factories/query_loader.py
 
 import logging
 import json

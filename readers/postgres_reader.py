@@ -1,34 +1,22 @@
 # readers/postgres_reader.py
 
-
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Tuple, Optional
 import psycopg2
 from psycopg2 import pool
 import pandas as pd
-import awswrangler.postgresql  # pip install awswrangler psycopg2-binary
 from .base_reader import DBReader
-from python_project_generics.logging_config  import get_logger
-
+from python_project_generics.logging_config import get_logger
 
 logger = get_logger(__name__)
+
 
 @dataclass
 class PostgresDBReader(DBReader[psycopg2.extensions.connection]):
     """
     DBReader for Postgres/Aurora Postgres using psycopg2 + connection pooling.
-    Uses AWS Wrangler for DataFrame queries if desired.
 
-    Example config:
-      db_type: "postgres"
-      host: "localhost"
-      port: 5432
-      user: "dev_user"
-      password: "dev_password"
-      database: "dev_db"
-      pooling:
-        minconn: 1
-        maxconn: 5
+    Provides methods to execute queries and fetch results as dataframes.
     """
     host: str
     port: int
@@ -36,10 +24,20 @@ class PostgresDBReader(DBReader[psycopg2.extensions.connection]):
     password: str
     database: str
     pooling: Dict[str, Any]
-    sql: Optional[str] = None
-    params: Optional[Tuple[Any, ...]] = None
+    sql: Optional[str] = None  # Optional SQL query provided at initialization
+    params: Optional[Tuple[Any, ...]] = None  # Optional params for the SQL query
+    extras: Dict[str, Any] = field(default_factory=dict)
 
-    _connection_pool: Optional[pool.SimpleConnectionPool] = None
+    _connection_pool: Optional[pool.SimpleConnectionPool] = field(default=None, init=False)
+
+    def __post_init__(self):
+        """Validate parameters and convert params to tuple if needed"""
+        logger.info(f"[PostgresDBReader] Initialized for {self.database}@{self.host}:{self.port}")
+
+        # Convert params from list to tuple if needed
+        if self.params is not None and not isinstance(self.params, tuple):
+            self.params = tuple(self.params)
+            logger.debug("[PostgresDBReader] Converted params to tuple")
 
     def connect(self) -> psycopg2.extensions.connection:
         """
@@ -56,70 +54,121 @@ class PostgresDBReader(DBReader[psycopg2.extensions.connection]):
                 port=self.port,
                 user=self.user,
                 password=self.password,
-                database=self.database
+                database=self.database,
+                #connect_timeout=10,  # Add connection timeout
+                #options="-c statement_timeout=60000"
             )
         logger.debug("[PostgresDBReader] Getting connection from pool.")
         return self._connection_pool.getconn()
 
     def execute_query(
-        self,
-        query: str,
-        params: Optional[Tuple[Any, ...]] = None
+            self,
+            query: Optional[str] = None,
+            params: Optional[Tuple[Any, ...]] = None
     ) -> List[Tuple[Any, ...]]:
         """
         Executes a SQL query with Postgres placeholders (%s).
         Returns rows if SELECT, otherwise an empty list.
+
+        Parameters:
+        -----------
+        query : str, optional
+            SQL query to execute. If None, uses the sql attribute
+        params : tuple, optional
+            Parameters for the query. If None, uses the params attribute
+
+        Returns:
+        --------
+        List[Tuple[Any, ...]]
+            Rows returned by the query (empty list for non-SELECT queries)
         """
+        # Use provided query/params or instance attributes
+        sql = query if query is not None else self.sql
+        parameters = params if params is not None else self.params
+
+        if sql is None:
+            raise ValueError("[PostgresDBReader] No SQL query provided")
+
         conn = self.connect()
-        rows=[]
-        query = self.sql
-        params = self.params
+        rows = []
+
         try:
             with conn.cursor() as cur:
-                logger.debug(f"[PostgresDBReader] Executing: {query} | params={params}")
-                cur.execute(query, params)
+                logger.debug(f"[PostgresDBReader] Executing: {sql} | params={parameters}")
+                cur.execute(sql, parameters or ())
+
                 if cur.description:
                     rows = cur.fetchall()
                     logger.info(f"[PostgresDBReader] Query returned {len(rows)} rows.")
-                    return rows
                 else:
                     conn.commit()
                     logger.info("[PostgresDBReader] No result set. Changes committed.")
-                    return rows
         except Exception as e:
             logger.error(f"[PostgresDBReader] Error executing query: {e}")
-            conn.rollback()
-            return rows
+            if conn and not conn.closed:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass  # Swallow secondary exceptions during cleanup
+            raise
         finally:
-            if self._connection_pool:
-                logger.debug("[PostgresDBReader] Releasing connection back to pool.")
-                self._connection_pool.putconn(conn)
+            if conn and self._connection_pool and not conn.closed:
+                try:
+                    self._connection_pool.putconn(conn)
+                except Exception as e:
+                    logger.error(f"[PostgresDBReader] Error returning connection to pool: {e}")
 
+        return rows
 
     def fetch_as_dataframe(
-        self,
-        query: str,
-        params: Optional[Tuple[Any, ...]] = None
+            self,
+            query: Optional[str] = None,
+            params: Optional[Tuple[Any, ...]] = None
     ) -> pd.DataFrame:
         """
-        fetch a DataFrame from Postgres.
+        Executes a query and returns the results as a pandas DataFrame.
+
+        Parameters:
+        -----------
+        query : str, optional
+            SQL query to execute. If None, uses the sql attribute
+        params : tuple, optional
+            Parameters for the query. If None, uses the params attribute
+
+        Returns:
+        --------
+        pandas.DataFrame
+            DataFrame containing query results
         """
-        rows=self.execute_query(query, params)
-        logger.info(f"[PostgresDBReader] Fetched {len(rows)} rows.")
+        # Use provided query/params or instance attributes
+        sql = query if query is not None else self.sql
+        parameters = params if params is not None else self.params
+
+        if sql is None:
+            raise ValueError("[PostgresDBReader] No SQL query provided")
+
+        # Get column names and data
+        rows = self.execute_query(sql, parameters)
+
         if not rows:
+            logger.info("[PostgresDBReader] No rows returned. Returning empty DataFrame.")
             return pd.DataFrame()
 
+        # Get column names
         conn = self.connect()
         try:
             with conn.cursor() as cur:
-                cur.execute(query, params)
-                col_names=[desc[0] for desc in cur.description]
-                logger.info(f"[PostgresDBReader] Fetched {col_names} .")
+                cur.execute(sql, parameters or ())
+                col_names = [desc[0] for desc in cur.description]
+                logger.debug(f"[PostgresDBReader] Column names: {col_names}")
         finally:
             if self._connection_pool:
                 self._connection_pool.putconn(conn)
-        return pd.DataFrame.from_records(rows, columns=col_names)
 
+        # Create DataFrame
+        df = pd.DataFrame.from_records(rows, columns=col_names)
+        logger.info(f"[PostgresDBReader] Created DataFrame with shape {df.shape}")
+        return df
 
     def close(self) -> None:
         """
