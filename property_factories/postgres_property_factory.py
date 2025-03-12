@@ -1,7 +1,7 @@
 # property_factories/postgres_property_factory.py
 
 from typing import Any, Dict
-from python_project_generics.logging_config import get_logger
+from logging_config import get_logger
 from .base_property_factory import BasePropertyFactory
 
 logger = get_logger(__name__)
@@ -16,15 +16,21 @@ class PostgresPropertyFactory(BasePropertyFactory):
 
     # Valid keys for PostgreSQL configuration
     VALID_KEYS = {
-        "db_type",  # Type identifier (always "postgres")
-        "host",  # Database host
-        "port",  # Database port
-        "user",  # Username
-        "password",  # Password
-        "database",  # Database name
-        "pooling",  # Connection pooling settings
-        "sql",  # Optional SQL query
-        "params"  # Optional query parameters
+        "db_type",
+        "host",
+        "port",
+        "user",
+        "password",
+        "database",
+        "pooling",
+        "sql",
+        "params",
+        # Add new optional IAM keys:
+        "iam_auth",
+        "region",
+        "sslrootcert",
+        "sslmode",
+        "token_ttl"
     }
 
     def __init__(self, config_file: str, environment: str) -> None:

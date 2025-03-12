@@ -1,8 +1,8 @@
 # property_factories/s3_property_factory.py
 
 from typing import Any, Dict
-from python_project_generics.property_factories.base_property_factory import BasePropertyFactory
-from python_project_generics.logging_config import get_logger
+from property_factories.base_property_factory import BasePropertyFactory
+from logging_config import get_logger
 
 logger = get_logger(__name__)
 

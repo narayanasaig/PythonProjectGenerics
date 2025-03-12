@@ -8,7 +8,7 @@ init_path=Path(os.path.join(os.path.dirname(__file__))).resolve()
 sys.path.append(str(init_path))
 
 
-from .logging_config import (setup_logging,get_logger)
+from logging_config import (setup_logging,get_logger)
 
 
 logger = setup_logging(

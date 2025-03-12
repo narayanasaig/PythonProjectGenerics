@@ -9,7 +9,7 @@ from .base_reader import DBReader
 from .postgres_reader import PostgresDBReader
 from .oracle_reader import OracleDBReader
 from .connection_factory import ConnectionFactory
-from python_project_generics.logging_config import (setup_logging,get_logger)
+from logging_config import (setup_logging,get_logger)
 
 
 __all__ = [

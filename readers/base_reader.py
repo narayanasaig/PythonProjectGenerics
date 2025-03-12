@@ -3,7 +3,7 @@
 from typing import Protocol, TypeVar, Generic, Any, List, Tuple, Optional
 import pandas as pd
 
-from python_project_generics.logging_config import get_logger
+from logging_config import get_logger
 
 logger = get_logger(__name__)
 

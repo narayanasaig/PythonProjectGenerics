@@ -2,7 +2,7 @@
 
 import yaml
 from typing import Any, Dict
-from python_project_generics.logging_config import get_logger
+from logging_config import get_logger
 
 logger = get_logger(__name__)
 

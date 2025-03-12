@@ -5,8 +5,8 @@ from typing import Any, Dict, List, Tuple, Optional
 import cx_Oracle
 import pandas as pd
 from .base_reader import DBReader
-
-from python_project_generics.logging_config import get_logger
+from DBConnections.oracle_kerberose_pool import OracleKerberosPool
+from logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -29,9 +29,9 @@ class OracleDBReader(DBReader[cx_Oracle.Connection]):
       params: [123]  # Optional
     """
     dsn: str
-    user: str
-    password: str
     pooling: Dict[str, Any]
+    use_kerberos: bool = True,
+    external_auth = True,
     sql: Optional[str] = None  # Optional SQL query provided at initialization
     params: Optional[List[Any]] = None  # Optional params for the SQL query
 
@@ -58,18 +58,17 @@ class OracleDBReader(DBReader[cx_Oracle.Connection]):
 
             logger.info(
                 f"[OracleDBReader] Initializing SessionPool: min={min_sess}, max={max_sess}, increment={increment}")
-            self._session_pool = cx_Oracle.SessionPool(
-                user=self.user,
-                password=self.password,
+            self._session_pool = OracleKerberosPool(
                 dsn=self.dsn,
                 min=min_sess,
                 max=max_sess,
                 increment=increment,
+                external_auth=True,
                 threaded=True,
                 getmode=cx_Oracle.SPOOL_ATTRVAL_NOWAIT
             )
         logger.debug("[OracleDBReader] Acquiring a connection from the pool.")
-        return self._session_pool.acquire()
+        return self._session_pool.getconn()
 
     def execute_query(
             self,
@@ -116,7 +115,7 @@ class OracleDBReader(DBReader[cx_Oracle.Connection]):
             raise
         finally:
             if self._session_pool:
-                self._session_pool.release(conn)
+                self._session_pool.putconn(conn)
 
     def fetch_as_dataframe(
             self,
@@ -165,7 +164,7 @@ class OracleDBReader(DBReader[cx_Oracle.Connection]):
             raise
         finally:
             if self._session_pool:
-                self._session_pool.release(conn)
+                self._session_pool.putconn(conn)
 
     def close(self) -> None:
         """
@@ -173,5 +172,5 @@ class OracleDBReader(DBReader[cx_Oracle.Connection]):
         """
         if self._session_pool:
             logger.info("[OracleDBReader] Closing session pool.")
-            self._session_pool.close()
+            self._session_pool.closeall()
             self._session_pool = None

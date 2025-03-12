@@ -4,7 +4,7 @@ import logging
 import json
 from typing import Dict, Any, Tuple, List
 
-from python_project_generics.logging_config import get_logger
+from logging_config import get_logger
 
 
 logger = get_logger(__name__)

@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, List, Any, Dict, Union, Tuple
 
 from readers.connection_factory import ConnectionFactory
-from python_project_generics.logging_config import get_logger
+from logging_config import get_logger
 
 
 class ReaderService:

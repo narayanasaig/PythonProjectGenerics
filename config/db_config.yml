@@ -8,6 +8,12 @@ DEV:
   pooling:
     minconn: 1
     maxconn: 5
+  # Optionally these new fields:
+  iam_auth: False  # or true if you want to use IAM
+  region: "us-east-1"
+  sslrootcert: "rds-ca-2019-root.pem"
+  sslmode: "require"
+  token_ttl: 900
 
 PROD:
   db_type: "postgres"
@@ -23,3 +29,40 @@ PROD:
 DEV_S3:
   db_type: "s3"
   region: "us-east-1"
+
+  ############################################################
+  # NEW: Oracle Dev environment example
+  ############################################################
+  DEV_ORACLE:
+    db_type: "oracle" # If using user/password:
+    dsn: "dev-oracle.company.com"
+    port: 1521
+    service_name: "ORCLDEV"     # or 'sid' if you have a SID
+    user: ""
+    password: ""
+    pooling:
+      min: 1
+      max: 5
+      increment: 1
+    # If using Kerberos, you might set these:
+    use_kerberos: True         # set to true if OS-level Kerberos auth
+    external_auth: True        # if Kerberos, typically true in your code
+
+  ############################################################
+  # NEW: Oracle Prod environment example
+  ############################################################
+  PROD_ORACLE:
+    db_type: "oracle" # If using user/password:
+    dsn: "dev-oracle.company.com"
+    port: 1521
+    service_name: "ORCLDEV"     # or 'sid' if you have a SID
+    user: ""
+    password: ""
+    pooling:
+      min: 1
+      max: 5
+      increment: 1
+    # If using Kerberos, you might set these:
+    use_kerberos: True         # set to true if OS-level Kerberos auth
+    external_auth: True        # if Kerberos, typically true in your code
+

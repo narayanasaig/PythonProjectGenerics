@@ -1,7 +1,7 @@
 # readers/connection_factory.py
 
 from typing import TypeVar, Generic, Dict, Any
-from python_project_generics.logging_config import get_logger
+from logging_config import get_logger
 
 from .base_reader import DBReader
 from .postgres_reader import PostgresDBReader
@@ -10,6 +10,9 @@ from .s3_reader import WranglerS3Reader
 from property_factories.postgres_property_factory import PostgresPropertyFactory
 from property_factories.oracle_property_factory import OraclePropertyFactory
 from property_factories.s3_property_factory import S3PropertyFactory
+from DBConnections.oracle_kerberose_pool import OracleKerberosPool
+from DBConnections.postgre_auth_pool import PostgreAuthPool
+
 
 logger = get_logger(__name__)
 

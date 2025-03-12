@@ -3,10 +3,12 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Tuple, Optional
 import psycopg2
+from asn1crypto.core import Boolean
 from psycopg2 import pool
 import pandas as pd
 from .base_reader import DBReader
-from python_project_generics.logging_config import get_logger
+from logging_config import get_logger
+from DBConnections.postgre_auth_pool import PostgreAuthPool
 
 logger = get_logger(__name__)
 
@@ -21,9 +23,14 @@ class PostgresDBReader(DBReader[psycopg2.extensions.connection]):
     host: str
     port: int
     user: str
-    password: str
+    password:  Optional[str]
     database: str
     pooling: Dict[str, Any]
+    iam_auth: Optional[Boolean]
+    region: str
+    sslrootcert: Optional[str]
+    sslmode: Optional[str]
+    token_ttl: Optional[int]
     sql: Optional[str] = None  # Optional SQL query provided at initialization
     params: Optional[Tuple[Any, ...]] = None  # Optional params for the SQL query
     extras: Dict[str, Any] = field(default_factory=dict)
@@ -47,17 +54,39 @@ class PostgresDBReader(DBReader[psycopg2.extensions.connection]):
             minconn = self.pooling.get("minconn", 1)
             maxconn = self.pooling.get("maxconn", 5)
             logger.info(f"[PostgresDBReader] Initializing pool: minconn={minconn}, maxconn={maxconn}")
-            self._connection_pool = pool.SimpleConnectionPool(
-                minconn,
-                maxconn,
-                host=self.host,
-                port=self.port,
-                user=self.user,
-                password=self.password,
-                database=self.database,
-                #connect_timeout=10,  # Add connection timeout
-                #options="-c statement_timeout=60000"
-            )
+            iam_auth = self.extras.get("iam_auth", False)
+            if iam_auth:
+                region = self.extras.get("region", "us-east-1")
+                sslrootcert = self.extras.get("sslrootcert", None)
+                sslmode = self.extras.get("sslmode", "require")
+                token_ttl = self.extras.get("token_ttl", 900)
+                logger.info(f"sslrootcert: {sslrootcert} ; sslmode: {sslmode} ; token_ttl: {token_ttl}; region: {region} ")
+                logger.info("[PostgresDBReader] Using IAM-based PostgreAuthPool.")
+                self._connection_pool = PostgreAuthPool(
+                    minconn=minconn,
+                    maxconn=maxconn,
+                    host=self.host,
+                    port=self.port,
+                    user=self.user,
+                    database=self.database,
+                    region=region,
+                    sslrootcert=sslrootcert,
+                    sslmode=sslmode,
+                    token_ttl=token_ttl,
+                    # pass in any extra psycopg2 args you like
+                )
+            else:
+                logger.info("[PostgresDBReader] Using standard password-based pool.")
+                self._connection_pool = pool.SimpleConnectionPool(
+                    minconn,
+                    maxconn,
+                    host=self.host,
+                    port=self.port,
+                    user=self.user,
+                    password=self.password,  # password is used only for standard auth
+                    database=self.database,
+                    **self.extras
+                )
         logger.debug("[PostgresDBReader] Getting connection from pool.")
         return self._connection_pool.getconn()
 

@@ -3,7 +3,7 @@ import sys
 import argparse
 from typing import List, Any
 from services.reader_service import ReaderService
-from python_project_generics.logging_config import get_logger
+from logging_config import get_logger
 import gc
 
 logger = get_logger(__name__)

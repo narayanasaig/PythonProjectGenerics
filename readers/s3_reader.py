@@ -8,7 +8,7 @@ import pandas as pd
 import boto3
 import awswrangler as wr
 from botocore.client import BaseClient
-from python_project_generics.logging_config import get_logger
+from logging_config import get_logger
 
 from .base_reader import DBReader
 
