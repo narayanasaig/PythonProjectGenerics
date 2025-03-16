@@ -33,8 +33,8 @@ class OracleKerberosPool(cx_Oracle.SessionPool):
         minconn: int,
         maxconn: int,
         dsn: str,
-        user: str = "",
-        password: str = "",
+        user: str = None,
+        password: str = None,
         external_auth: bool = True,
         increment: int = 1,
         getmode: int = cx_Oracle.SPOOL_ATTRVAL_NOWAIT,
@@ -58,8 +58,8 @@ class OracleKerberosPool(cx_Oracle.SessionPool):
 
         # Initialize parent SessionPool
         super().__init__(
-            user=user or "",
-            password=password or "",
+            user=user ,
+            password=password,
             dsn=dsn,
             min=minconn,
             max=maxconn,

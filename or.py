@@ -7,7 +7,7 @@ import pandas as pd
 
 from services.reader_service import ReaderService
 from services.writer_service import WriterService
-from python_project_generics.logging_config import get_logger
+from logging_config import get_logger
 
 logger = get_logger(__name__)
 

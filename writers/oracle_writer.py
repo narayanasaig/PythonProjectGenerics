@@ -130,20 +130,18 @@ class OracleDBWriter(DBWriter):
             logger.info("[OracleDBWriter] No rows to insert (DataFrame is empty).")
             return
 
-        # Validate sequence usage
         if sequence_name and not pk_col:
             raise ValueError(
                 "A sequence_name was provided but no pk_col. "
                 "pk_col is mandatory if sequence_name is used."
             )
 
-        # If using a sequence, fill the PK column in the DataFrame
+        # If using a "sequence", we actually use your custom Sequences table
         if sequence_name and pk_col:
             if pk_col not in df.columns:
                 df[pk_col] = None
             self._fill_df_pk_with_sequence(df, pk_col, sequence_name)
 
-        # Build the INSERT SQL
         insert_sql = self._build_insert_sql(list(df.columns))
 
         conn = self.connect()
@@ -345,30 +343,60 @@ class OracleDBWriter(DBWriter):
         conn = self.connect()
         try:
             with conn.cursor() as cur:
-                seq_values = self._allocate_sequence_block(cur, sequence_name, count_needed)
+
+                seq_values = self._allocate_custom_sequence_block(
+                    cursor=cur,
+                    entity_name=sequence_name,  ## the "Sequences" table entityName is passed here
+                    block_size=count_needed
+                )
             df[pk_col] = seq_values
         finally:
             if self._session_pool:
                 self._session_pool.putconn(conn)
 
-    def _allocate_sequence_block(
+    def _allocate_custom_sequence_block(
         self,
         cursor,
-        sequence_name: str,
+        entity_name: str,
         block_size: int
-    ):
+    ) -> List[int]:
         """
-        Fetch 'block_size' new values from 'sequence_name' using
-        a CONNECT BY approach for one-shot retrieval of multiple NEXTVALs.
+          1) SELECT LAST_THRESHOLD from Sequences table WHERE ENTITYNAME=entity_name FOR UPDATE
+          2) new_start = LAST_THRESHOLD + 1
+          3) new_end = LAST_THRESHOLD + block_size
+          4) update Sequences table: set LAST_THRESHOLD = new_end, last_changed_at = sysdate
+          5) commit
+          6) Build a range from new_start to new_end
         """
-        sql = f"""
-        WITH nums AS (
-          SELECT LEVEL AS l
-          FROM DUAL
-          CONNECT BY LEVEL <= :block_size
-        )
-        SELECT {sequence_name}.NEXTVAL
-        FROM nums
+        # 1) Lock the row for this entity
+        select_sql = """
+          SELECT LAST_THRESHOLD FROM SEQUENCES WHERE ENTITYNAME = :ent FOR UPDATE
         """
-        cursor.execute(sql, {"block_size": block_size})
-        return [row[0] for row in cursor.fetchall()]
+
+        cursor.execute(select_sql, ent=entity_name)
+        row = cursor.fetchone()
+        if not row:
+            raise ValueError(f"No entry found in SEQUENCES table for ENTITYNAME='{entity_name}'")
+
+        old_threshold = row[0]
+        if old_threshold is None:
+            old_threshold = 0
+
+        new_start = old_threshold + 1
+        new_end = old_threshold + block_size  # We allocate 'block_size' new IDs
+
+        # 2) Update the Sequences table
+        update_sql = """
+          UPDATE SEQUENCES SET LAST_THRESHOLD = :new_thr, LAST_CHANGED_AT = SYSDATE WHERE ENTITYNAME = :ent
+        """
+        cursor.execute(update_sql, new_thr=new_end, ent=entity_name)
+        # We'll commit after the insert. Or we can do it now if we want
+        # But let's do a partial commit so the row is unlocked:
+        cursor.connection.commit()
+
+        logger.info(f"[OracleDBWriter] For entity='{entity_name}', allocated new IDs from {new_start} to {new_end}.")
+
+        # 3) Build a list of allocated IDs
+        allocated_ids = list(range(new_start, new_end + 1))
+
+        return allocated_ids
