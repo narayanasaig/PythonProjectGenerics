@@ -63,7 +63,7 @@ class OracleDBWriter(DBWriter):
                 min=min_sess,
                 max=max_sess,
                 increment=increment,
-                external_auth=True,
+                externalauth=True,
                 threaded=True,
                 getmode=cx_Oracle.SPOOL_ATTRVAL_NOWAIT
             )
